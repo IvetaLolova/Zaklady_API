@@ -1,6 +1,7 @@
 from flask import Flask, request, make_response
 from flask_restful import Resource, Api, reqparse
 
+
 customers = [
              {
               "email" : "jan.novak@example.cz",
@@ -37,10 +38,6 @@ class Customers(Resource):
 
 class Customer(Resource):
     # stené jako funkce get_customer() z minulé verze
-    parser = reqparse.RequestParser()
-    parser.add_argument('email', type=str, required=True)
-    parser.add_argument('name', type=str, required=True)
-    parser.add_argument('newsletter_status', type=bool, required=True)
     def get(self, username):
         for customer in customers:
             if customer['username'] == username:
@@ -49,12 +46,12 @@ class Customer(Resource):
 
     # create_customer
     def post(self, username):
-        data = self.parser.parse_args()
+        request_data = request.get_json()
         new_customer = {
-            "email": data['email'],
+            "email": request_data['email'],
             "username": username,
-            "name": data['name'],
-            "newsletter_status": data['newsletter_status'],
+            "name": request_data['name'],
+            "newsletter_status": request_data['newsletter_status'],
             "trips": []
         }
 
@@ -68,22 +65,22 @@ class Customer(Resource):
     # Uprava zákazníka
     # update_customer
     def put(self, username):
-        data = self.parser.parse_args()
+        request_data = request.get_json()
         updated_customer = {
-            "email": data['email'],
             "username": username,
-            "name": data['name'],
-            "newsletter_status": data['newsletter_status'],
+            "email": request_data['email'],
+            "name": request_data['name'],
+            "newsletter_status": request_data['newsletter_status'],
             "trips": []
         }
 
         for customer in customers:
             if customer['username'] == updated_customer['username']:
-                customer.update(updated_customer)
-                return ({'message': 'customer updated'},updated_customer), 200
+                customer.update(request_data)
+                return updated_customer, 201
 
         customers.append(updated_customer)
-        return ({'message': 'customer created'},updated_customer), 201
+        return updated_customer, 201
 
     # Vymazání zákazníka
     # delete_customer
@@ -97,10 +94,6 @@ class Customer(Resource):
 
 
 class Trips(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('destination', type=str, required=True)
-    parser.add_argument('price', type=float, required=True)
-
     # Vrácení všech zájezdů pod zákazníkem
     # get_customer_trip
     def get(self, username):
@@ -112,15 +105,16 @@ class Trips(Resource):
     # Vytvoření zájezdu pod zákazníkem
     # create_customer_trip
     def post(self, username):
-        data = self.parser.parse_args()
-        new_customer_trip = {
-            "destination": data['destination'],
-            "price": data['price']
-        }
         for customer in customers:
             if customer['username'] == username:
+                request_data = request.get_json()
+                new_customer_trip = {
+                    "destination": request_data['destination'],
+                    "price": request_data['price']
+                }
+
                 customer['trips'].append(new_customer_trip)
-                return ({'message': str('New trip added to customer: '+username+'.')},new_customer_trip), 201
+                return new_customer_trip, 201
         return {'message': 'customer not found'}, 404
 
 
